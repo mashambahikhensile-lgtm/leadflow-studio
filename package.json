@@ -1,0 +1,19 @@
+{
+  "name": "leadflow-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lead intake and follow-up workflow demo for service businesses",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test",
+    "seed": "node seed.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
