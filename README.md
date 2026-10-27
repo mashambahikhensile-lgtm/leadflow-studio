@@ -2,6 +2,25 @@
 
 **A lead intake and follow-up workflow demo for service businesses.** Self-initiated portfolio project by Mash Web Studio. It is not a client project, and all included sample leads are fictional.
 
+## Screenshots
+
+LeadFlow Studio provides a responsive enquiry form and a private dashboard for managing incoming leads.
+
+### Public homepage
+![LeadFlow Studio public homepage](screenshots/01-public-homepage.png)
+
+### Lead intake form
+![LeadFlow Studio enquiry form](screenshots/03-enquiry-form-submission-success.png)
+
+### Workflow explanation
+![LeadFlow Studio workflow explanation](screenshots/02-workflow-explainer.png)
+
+### Admin dashboard
+![LeadFlow Studio admin dashboard](screenshots/04-admin-dashboard-overview.png)
+
+### Lead management
+![LeadFlow Studio lead management](screenshots/05-admin-dashboard-lead-list.png)
+
 ## The problem
 Small service businesses can receive enquiries through their websites but still struggle to collect complete details, spot duplicate submissions, keep a record, and decide what to do next. LeadFlow demonstrates a small, inspectable workflow for those steps.
 
