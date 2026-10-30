@@ -1,114 +1,227 @@
 # LeadFlow Studio
 
-**A lead intake and follow-up workflow demo for service businesses.** Self-initiated portfolio project by Mash Web Studio. It is not a client project, and all included sample leads are fictional.
+**A lead intake and follow-up workflow demonstration for service businesses.**
 
-## Screenshots
+LeadFlow Studio is a self-initiated portfolio project by Mash Web Studio. It demonstrates how a service business could capture enquiries, validate submissions, maintain lead records, manage follow-up status, and send lead-created events to an external system.
 
-LeadFlow Studio provides a responsive enquiry form and a private dashboard for managing incoming leads.
+This is a portfolio demonstration, not a commissioned client project. All test submissions use fictional information.
 
-### Public homepage
-![LeadFlow Studio public homepage](screenshots/01-public-homepage.png)
+## Project Overview
 
-### Lead intake form
-![LeadFlow Studio enquiry form](screenshots/03-enquiry-form-submission-success.png)
+Small service businesses can receive enquiries through their websites but still struggle to collect complete information, prevent duplicate submissions, keep records organised, and follow up consistently.
 
-### Workflow explanation
-![LeadFlow Studio workflow explanation](screenshots/02-workflow-explainer.png)
+LeadFlow Studio demonstrates a lightweight workflow for addressing those problems.
 
-### Admin dashboard
-![LeadFlow Studio admin dashboard](screenshots/04-admin-dashboard-overview.png)
+### Key Features
 
-### Lead management
-![LeadFlow Studio lead management](screenshots/05-admin-dashboard-lead-list.png)
+- Responsive public enquiry form.
+- Client-side and server-side input validation.
+- Express REST API with bounded request size.
+- JSON-file persistence for local, low-volume demonstrations.
+- Duplicate-email prevention within a 24-hour window.
+- Honeypot field and in-memory rate limiting for basic bot and request-noise resistance.
+- Private admin dashboard protected by HTTP Basic Authentication.
+- Lead listing, searching, filtering, status updates, and deletion.
+- Optional persistent webhook outbox with asynchronous delivery.
+- Retry handling for transient webhook failures.
+- Dead-letter retention for non-retryable responses and exhausted attempts.
+- Automated tests using Node.js's built-in test runner.
 
-## The problem
-Small service businesses can receive enquiries through their websites but still struggle to collect complete details, spot duplicate submissions, keep a record, and decide what to do next. LeadFlow demonstrates a small, inspectable workflow for those steps.
+## Technology Stack
 
-## What works in this project
-- Responsive public enquiry form with client-side and server-side validation.
-- Express JSON API with bounded request size, required-field validation, email checks, consent recording, and field-level errors.
-- JSON-file persistence for a low-volume local demo.
-- Duplicate email check for submissions within 24 hours.
-- Honeypot field and in-memory per-IP rate limiting for basic bot/noise resistance.
-- Admin dashboard protected with HTTP Basic Authentication; list, search, filter, update status, and delete lead records.
-- Optional outgoing webhook POST when `LEAD_WEBHOOK_URL` is configured; the lead is stored even if the webhook fails.
-- Security headers, safe HTML escaping in the admin UI, empty/loading/error states, and automated API tests.
+| Technology | Purpose |
+|---|---|
+| Node.js | Server runtime |
+| Express | HTTP server and REST API |
+| HTML | Page structure |
+| CSS | Responsive presentation |
+| Vanilla JavaScript | Client-side interactions |
+| JSON files | Local lead and webhook-queue persistence |
+| Node.js test runner | Automated tests |
+
+The local demonstration does not require a separate database server or a paid integration service.
 
 ## Architecture
 
 ```text
-Browser form
-   │ POST /api/leads
-   ▼
-Express API ── validation + duplicate check ── JSON file store
-   │                                             │
-   └── optional HTTPS webhook                    └── Admin API (Basic Auth)
-                                                        │
-                                                        ▼
-                                                  Admin dashboard
+                    Visitor
+                       |
+                       v
+              Public enquiry form
+                       |
+                       | POST /api/leads
+                       v
+                 Express API
+                       |
+              Validation and checks
+                       |
+              +--------+---------+
+              |                  |
+              v                  v
+        Lead JSON store    Persistent webhook
+              |             outbox (optional)
+              |                  |
+              v                  v
+        Admin REST API      Background worker
+              |                  |
+              v                  v
+       Admin dashboard     External webhook
+                              endpoint
 ```
 
-**Stack:** Node.js 18.17+, Express 4, vanilla HTML/CSS/JavaScript, Node's built-in test runner. No database server or paid service is required for the local demo.
+When webhook integration is configured, accepted lead submissions generate a `lead.created` event. The event is written to the local outbox and delivered asynchronously.
 
-## Run locally
+The outbox is file-backed and intended for a single application process. It is not a distributed queue.
 
-1. Install Node.js 18.17 or newer from <https://nodejs.org/>.
-2. Open this project folder in VS Code.
-3. In the integrated terminal, run:
+## Screenshots
 
-   ```bash
-   npm install
-   ```
+The repository includes screenshots of the public interface and administration workflow.
 
-4. Copy `.env.example` to `.env` and change `ADMIN_PASSWORD` to a long unique password. `server.js` does not automatically load `.env`, so either set environment variables in your shell or install/use a local dotenv runner. The easiest dependency-free Windows PowerShell launch is:
+### Public homepage
 
-   ```powershell
-   $env:PORT="3000"
-   $env:ADMIN_USER="demo"
-   $env:ADMIN_PASSWORD="replace-this-with-a-long-unique-password"
-   $env:DATA_FILE="./data/leads.json"
-   npm start
-   ```
+![LeadFlow Studio public homepage](screenshots/01-public-homepage.png)
 
-   macOS/Linux:
+### Enquiry form
 
-   ```bash
-   PORT=3000 ADMIN_USER=demo ADMIN_PASSWORD='replace-this-with-a-long-unique-password' DATA_FILE=./data/leads.json npm start
-   ```
+![LeadFlow Studio enquiry form](screenshots/03-enquiry-form-submission-success.png)
 
-5. Open <http://localhost:3000>. Submit a fictional enquiry.
-6. Open <http://localhost:3000/admin.html>. Enter the configured admin username and password when prompted.
-7. To load the provided fictional sample records before starting, run `npm run seed`. The seed command refuses to overwrite an existing data file.
+### Workflow explanation
 
-The server creates `data/leads.json` on first use. The `.env.example` file documents variables but is not automatically read by Node; this is intentional to avoid adding a configuration dependency to the demo.
+![LeadFlow Studio workflow explanation](screenshots/02-workflow-explainer.png)
 
-## Verify and test
+### Admin dashboard
 
-```bash
-npm test
+![LeadFlow Studio admin dashboard](screenshots/04-admin-dashboard-overview.png)
+
+### Lead management
+
+![LeadFlow Studio lead management](screenshots/05-admin-dashboard-lead-list.png)
+
+## Run Locally
+
+### Requirements
+
+- Node.js 18.17 or newer.
+- npm.
+- A terminal such as the VS Code integrated PowerShell terminal.
+
+### 1. Install dependencies
+
+Open the project directory in VS Code and run:
+
+```powershell
+npm.cmd ci
 ```
 
-The tests launch a local ephemeral HTTP server and use a temporary data file. They cover health, validation, authenticated access, create/list, duplicate prevention, status updates, deletion, and invalid status rejection. Tests are automated but should be run on your machine after installing dependencies; do not treat this README as evidence that a third-party deployment was tested.
+This installs the dependencies specified by the lockfile.
 
-Manual acceptance checklist:
-- [ ] Public form is usable at 375px width and desktop width.
-- [ ] Invalid email and missing consent show useful field errors.
-- [ ] Valid submission returns a success message and appears in admin.
-- [ ] Re-submitting the same email within 24 hours returns a duplicate warning.
-- [ ] Admin endpoint rejects unauthenticated requests.
-- [ ] Status changes persist after page refresh.
-- [ ] Delete removes the selected record.
-- [ ] An unavailable webhook does not prevent the lead being stored.
-- [ ] Browser console and server terminal have no unexpected errors.
+### 2. Configure environment variables
 
-## Optional webhook integration
-Set `LEAD_WEBHOOK_URL` to an HTTPS webhook endpoint you control (for example, an n8n Webhook node or Make custom webhook) and restart the server. On each accepted lead, LeadFlow sends a JSON POST shaped like:
+The application reads configuration directly from `process.env`. It does not automatically load a `.env` file.
+
+For a Windows PowerShell development session, configure the variables before starting the application:
+
+```powershell
+$env:PORT = "3000"
+$env:NODE_ENV = "development"
+$env:ADMIN_USER = "demo"
+$env:ADMIN_PASSWORD = "replace-this-with-a-long-unique-password"
+$env:DATA_FILE = "./data/leads.json"
+$env:WEBHOOK_QUEUE_FILE = "./data/webhook-outbox.json"
+```
+
+Choose a unique admin password. These environment variables apply to processes launched from the current PowerShell session.
+
+### 3. Start the application
+
+```powershell
+npm.cmd start
+```
+
+Open the public application at:
+
+`http://localhost:3000`
+
+The server creates the lead-data file when necessary.
+
+### 4. Open the admin dashboard
+
+Navigate to:
+
+`http://localhost:3000/admin.html`
+
+Enter the configured admin username and password when prompted.
+
+### 5. Run the automated tests
+
+In a separate terminal, run:
+
+```powershell
+npm.cmd test
+```
+
+The tests use temporary data and a local HTTP server where applicable.
+
+## Testing and Verification
+
+### Automated tests
+
+**Verified result: 11 tests passed, 0 failed.**
+
+The test run covered:
+
+- Health endpoint.
+- Invalid submission handling.
+- Lead storage and admin authentication.
+- Duplicate-email prevention.
+- Authenticated status updates and deletion.
+- Rejection of invalid status values.
+- Persistent webhook enqueue and successful delivery.
+- Retry after a transient HTTP 503 response.
+- Dead-letter retention for an HTTP 400 response.
+- Recovery of queued work by a new outbox instance.
+- Behaviour when no webhook endpoint is configured.
+
+The full test suite was run locally after installing dependencies.
+
+### Manual webhook integration test
+
+A fictional lead was submitted through the running application, and Webhook.site received an HTTP POST request containing the `lead.created` event.
+
+The received JSON payload included the expected fictional lead details. The request also displayed the `X-LeadFlow-Event-Id` header.
+
+Afterward, the local outbox file was inspected and contained an empty array:
+
+```json
+[]
+```
+
+Together, the received event and empty queue provide evidence of successful delivery for this test.
+
+This manual test verified successful delivery; it did not independently validate every retry, failure, or recovery scenario against a live endpoint.
+
+## Optional Webhook Integration
+
+LeadFlow can send events to an external webhook endpoint when `LEAD_WEBHOOK_URL` is configured.
+
+Set the environment variable before starting the server:
+
+```powershell
+$env:LEAD_WEBHOOK_URL = "https://your-webhook-endpoint.example"
+npm.cmd start
+```
+
+Replace the example with an HTTPS endpoint you control.
+
+When a lead is accepted, the application attempts to write a `lead.created` event to the persistent outbox. If the write succeeds, the API reports the workflow as queued. A background worker attempts delivery.
+
+### Example payload
 
 ```json
 {
   "event": "lead.created",
   "lead": {
-    "id": "uuid",
+    "id": "example-uuid",
     "name": "Sample Visitor",
     "email": "sample@example.com",
     "service": "Website design",
@@ -117,35 +230,83 @@ Set `LEAD_WEBHOOK_URL` to an HTTPS webhook endpoint you control (for example, an
 }
 ```
 
-The full payload includes the phone, message, consent flag, timestamps, and source. Only use a webhook endpoint you control and avoid real personal data in demos. The integration is optional; without the environment variable the app remains self-contained. A webhook delivery failure is reported in the submission response but does not roll back the locally stored lead. This is not a durable queue/retry system.
+The actual payload includes additional lead fields and timestamps.
 
-## Deployment notes and limitations
+### Delivery behaviour
 
-- Best for local demonstration or a single-instance, low-volume demo environment with persistent disk.
-- JSON-file storage is not appropriate for concurrent multi-instance production workloads. For a real client, replace it with PostgreSQL/Supabase or another managed database, add migrations, backups, and transactional duplicate protection.
-- Basic Auth is suitable for a simple private demo behind HTTPS but is not a complete production identity system. Use strong secrets, HTTPS, secret storage, login protection, and role-based access for production.
-- The in-memory rate limit resets when the server restarts and is not shared across instances.
-- Webhook delivery has a short timeout but no retry queue or signature verification.
-- No real email/SMS messages are sent, no CRM is connected by default, and no AI feature is included because it is not required to demonstrate the core workflow.
-- If the hosting platform uses an ephemeral filesystem, leads may be lost on restart. Verify persistence on the chosen host before using it for real submissions.
-- The frontend loads Google Fonts from an external provider; if strict self-hosting is needed, remove the import and use system fonts.
+The worker retries network errors, timeouts, HTTP 408, HTTP 429, and HTTP 5xx responses using exponential backoff and jitter.
 
-## API reference
+Other non-successful HTTP responses are retained as dead-letter records rather than retried automatically. Events that exhaust the configured attempt limit are also retained for inspection.
 
-| Method | Path | Auth | Purpose |
+Outgoing requests include:
+
+- `Idempotency-Key`
+- `X-LeadFlow-Event-Id`
+
+Both headers identify the event. The receiving system must implement its own idempotency handling if it needs to prevent duplicate processing.
+
+The outbox is stored at `./data/webhook-outbox.json` by default. Its location can be changed using `WEBHOOK_QUEUE_FILE`.
+
+**Security:** The outbox contains full event payloads, including personal information submitted through the form. Protect the file and never use real customer data in public demonstrations.
+
+## API Reference
+
+| Method | Endpoint | Authentication | Purpose |
 |---|---|---|---|
-| GET | `/api/health` | No | Health check |
-| POST | `/api/leads` | No | Validate and create a lead |
-| GET | `/api/leads` | Basic Auth | List lead records |
-| PATCH | `/api/leads/:id/status` | Basic Auth | Update status (`new`, `contacted`, `qualified`, `closed`) |
+| GET | `/api/health` | None | Health check |
+| POST | `/api/leads` | None | Validate and create a lead |
+| GET | `/api/leads` | Basic Auth | List leads |
+| PATCH | `/api/leads/:id/status` | Basic Auth | Update a lead's status |
 | DELETE | `/api/leads/:id` | Basic Auth | Delete a lead |
 
-## Suggested GitHub repository presentation
+Supported lead statuses:
 
-Repository name: `leadflow-studio`
+- `new`
+- `contacted`
+- `qualified`
+- `closed`
 
-Description: `A responsive lead intake and follow-up demo for service businesses — Node.js, Express, validation, persistent lead records, protected admin view, and optional webhook integration.`
+## Security and Limitations
 
-Topics: `nodejs`, `express`, `api`, `lead-management`, `web-development`, `form-validation`, `workflow-automation`, `portfolio-project`.
+LeadFlow Studio is a portfolio demonstration, not a production-ready CRM.
 
-Before publishing: run tests, remove any real lead data, verify `.env` is ignored, include screenshots, and make the README match the version actually pushed.
+Important limitations include:
+
+- Lead data is stored in JSON files rather than a transactional database.
+- The file-backed webhook outbox is intended for a single application process.
+- There is no built-in admin interface for managing dead-letter events.
+- Outgoing webhook requests do not include cryptographic request signatures.
+- Basic Authentication is not a complete production identity and access-management solution.
+- Rate limiting is held in memory and resets when the server restarts.
+- The local filesystem must be durable if lead records and queued events need to survive restarts.
+- The application does not send real email or SMS notifications and does not connect to a CRM by default.
+- Delivery and queue behaviour should be tested under the conditions expected in a real deployment.
+
+For a production implementation, consider a transactional database, a managed queue or database-backed job system, secure secret management, webhook signatures, monitoring, alerting, backup procedures, and stronger authentication.
+
+## Future Improvements
+
+Potential future improvements include:
+
+- A database-backed persistence layer.
+- Integration with a CRM or workflow automation platform.
+- Webhook delivery monitoring and dead-letter management.
+- Automated end-to-end integration tests.
+- Improved deployment configuration and operational logging.
+- Stronger authentication and access control.
+
+These are potential enhancements, not claims about features currently implemented.
+
+## Project Status
+
+LeadFlow Studio demonstrates a working lead intake and management API, local persistence, protected administration, and optional webhook delivery.
+
+The automated test suite passed 11 tests, and a manual test confirmed successful delivery of a fictional lead-created event to an external webhook endpoint.
+
+The project remains a learning and portfolio demonstration. Production deployment would require additional security, reliability, and operational work.
+
+## About
+
+**Built by Mash Web Studio** as a self-initiated portfolio project exploring web development, backend APIs, and workflow integration.
+
+The project demonstrates practical implementation and testing rather than claiming an existing client deployment.

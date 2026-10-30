@@ -3,6 +3,7 @@ const express = require('express');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { WebhookOutbox } = require('./webhook-outbox');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -10,6 +11,8 @@ const DATA_FILE = path.resolve(process.env.DATA_FILE || './data/leads.json');
 const ADMIN_USER = process.env.ADMIN_USER || 'demo';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'change-this-to-a-long-unique-password';
 const WEBHOOK_URL = process.env.LEAD_WEBHOOK_URL || '';
+const WEBHOOK_QUEUE_FILE = path.resolve(process.env.WEBHOOK_QUEUE_FILE || './data/webhook-outbox.json');
+const webhookOutbox = new WebhookOutbox({ queueFile: WEBHOOK_QUEUE_FILE, url: WEBHOOK_URL });
 const MAX_BODY = '20kb';
 const validStatuses = new Set(['new', 'contacted', 'qualified', 'closed']);
 const attempts = new Map();
@@ -123,15 +126,14 @@ app.post('/api/leads', rateLimit, async (req, res, next) => {
     let webhook = 'not-configured';
     if (WEBHOOK_URL) {
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3500);
-        const response = await fetch(WEBHOOK_URL, {
-          method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ event: 'lead.created', lead: record }), signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        webhook = response.ok ? 'delivered' : 'failed';
-      } catch { webhook = 'failed'; }
+        const result = await webhookOutbox.enqueue({ event: 'lead.created', lead: record });
+        webhook = result.queued ? 'queued' : result.reason;
+      } catch (error) {
+        // The lead itself is already safely stored. Do not make the visitor resubmit
+        // and risk a duplicate just because the separate webhook outbox is unavailable.
+        webhook = 'queue-failed';
+        console.error('Webhook event could not be queued', { leadId: record.id, message: error.message });
+      }
     }
     return res.status(201).json({ ok: true, message: 'Thanks — your enquiry has been received. We will review it shortly.', leadId: record.id, workflow: webhook });
   } catch (error) { next(error); }
@@ -170,6 +172,7 @@ app.use((err, _req, res, _next) => {
 });
 
 if (require.main === module) {
+  webhookOutbox.start();
   app.listen(PORT, () => console.log(`LeadFlow Studio running at http://localhost:${PORT}`));
 }
-module.exports = { app, validateLead, readLeads, writeLeads };
+module.exports = { app, validateLead, readLeads, writeLeads, webhookOutbox };
