@@ -10,6 +10,18 @@ const PORT = Number(process.env.PORT || 3000);
 const DATA_FILE = path.resolve(process.env.DATA_FILE || './data/leads.json');
 const ADMIN_USER = process.env.ADMIN_USER || 'demo';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'change-this-to-a-long-unique-password';
+
+if (process.env.NODE_ENV === 'production') {
+  if (
+    ADMIN_USER === 'demo' ||
+    ADMIN_PASSWORD === 'change-this-to-a-long-unique-password' ||
+    ADMIN_PASSWORD.length < 16
+  ) {
+    throw new Error(
+      'Production startup refused: set a non-default ADMIN_USER and an ADMIN_PASSWORD of at least 16 characters.'
+    );
+  }
+}
 const WEBHOOK_URL = process.env.LEAD_WEBHOOK_URL || '';
 const WEBHOOK_QUEUE_FILE = path.resolve(process.env.WEBHOOK_QUEUE_FILE || './data/webhook-outbox.json');
 const webhookOutbox = new WebhookOutbox({ queueFile: WEBHOOK_QUEUE_FILE, url: WEBHOOK_URL });
@@ -111,7 +123,7 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'LeadFlo
 app.post('/api/leads', rateLimit, async (req, res, next) => {
   try {
     // Honeypot: bots fill this hidden field; return a neutral response without storing it.
-    if (cleanText(req.body?.website, 200)) return res.status(201).json({ ok: true, message: 'Thanks — your enquiry has been received.' });
+    if (cleanText(req.body?.website, 200)) return res.status(201).json({ ok: true, message: 'Thanks â€” your enquiry has been received.' });
     const { lead, errors } = validateLead(req.body || {});
     if (Object.keys(errors).length) return res.status(422).json({ error: 'Please check the highlighted fields.', fields: errors });
     const leads = await readLeads();
@@ -135,7 +147,7 @@ app.post('/api/leads', rateLimit, async (req, res, next) => {
         console.error('Webhook event could not be queued', { leadId: record.id, message: error.message });
       }
     }
-    return res.status(201).json({ ok: true, message: 'Thanks — your enquiry has been received. We will review it shortly.', leadId: record.id, workflow: webhook });
+    return res.status(201).json({ ok: true, message: 'Thanks â€” your enquiry has been received. We will review it shortly.', leadId: record.id, workflow: webhook });
   } catch (error) { next(error); }
 });
 app.get('/api/leads', requireAdmin, async (_req, res, next) => {
